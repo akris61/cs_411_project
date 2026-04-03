@@ -1,9 +1,16 @@
--- Stage 3 index optimizations:
+-- Stage 3 index optimizations (MySQL 8+ EXPLAIN ANALYZE).
+--
+-- BASELINE for each query: schema must match schema.sql + data load only (PRIMARY KEY,
+-- UNIQUE uq_*, FKs). No experimental idx_stage3_* indexes.
+-- Before the first EXPLAIN ANALYZE of a session, verify:
+--   SHOW INDEX FROM observations WHERE Key_name LIKE 'idx_stage3_%';
+--   SHOW INDEX FROM indicators WHERE Key_name LIKE 'idx_stage3_%';
+-- If any rows appear, DROP those indexes, then re-run the baseline EXPLAIN ANALYZE.
 
 
 -- QUERY 1 — renewable energy query benchmark 
 
--- --- BASELINE TEST---
+-- --- BASELINE (no idx_stage3_* on observations / indicators) ---
 EXPLAIN ANALYZE
 SELECT r.region_id, r.code, r.name, r.country, ROUND(AVG(o.value), 4) AS avg_renewables_metric,
     COUNT(*) AS num_points

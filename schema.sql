@@ -1,5 +1,5 @@
 -- Renewable Energy Dashboard — core schema (MySQL 8+)
--- Load with: SOURCE sql/schema.sql;   (after CREATE DATABASE + USE)
+-- Load with: SOURCE schema.sql;   (after CREATE DATABASE + USE; paths relative to repo root)
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;

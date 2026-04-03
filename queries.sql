@@ -1,6 +1,6 @@
 -- Renewable Energy Dashboard — Advanced MySQL Queries
 -- Dataset: Kaggle “Global Data on Sustainable Energy”
--- Data loaded through scripts/build_stage3_data.py → sql/generated_kaggle_data.sql
+-- Data: generated_kaggle_data.sql (repo root).
 --
 -- Each query uses at least two advanced SQL concepts such as
 -- joins, UNION, GROUP BY aggregation, or subqueries.
