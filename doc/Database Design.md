@@ -24,7 +24,7 @@ We decided to use **Global Data on Sustainable Energy** as the primary dataset. 
 
 ## Step 2 — Data Source and Processing
 
-The main load file for our project is **`generated_kaggle_data.sql`** at the **repository root** (not under `sql/`).
+The main load file for our project is **`sql/generated_kaggle_data.sql`**.
 
 The original CSV from Kaggle includes columns like `Entity`, `Year`, several renewable energy and emissions metrics, and `Latitude` / `Longitude`.
 
@@ -65,15 +65,15 @@ For the requirement of having **1000+ rows in at least three tables**, our datab
 
 ## Step 4 — Important Files in the Repo
 
-All paths below are relative to the **repository root** (there is no `sql/` subfolder in this repo).
+Paths below are relative to the **repository root**.
 
 | File | Purpose |
 |------|---------|
-| `schema.sql` | `CREATE TABLE` DDL for all eight tables |
-| `load_data.sql` | How to `SOURCE` schema + bulk data in MySQL |
-| `generated_kaggle_data.sql` | Bulk `INSERT` statements (large file) |
-| `queries.sql` | Three advanced queries for the application |
-| `indexes.sql` | `EXPLAIN ANALYZE` + experimental `CREATE INDEX` / `DROP INDEX` |
+| `sql/schema.sql` | `CREATE TABLE` DDL for all eight tables |
+| `sql/load_data.sql` | How to `SOURCE` schema + bulk data in MySQL |
+| `sql/generated_kaggle_data.sql` | Bulk `INSERT` statements (large file) |
+| `sql/queries.sql` | Three advanced queries for the application |
+| `sql/indexes.sql` | `EXPLAIN ANALYZE` + experimental `CREATE INDEX` / `DROP INDEX` |
 | `doc/Database Design.md` | This write-up |
 
 ---
@@ -182,15 +182,15 @@ Each query ends with `LIMIT 15` for the result screenshots. If a run ever return
 
 ### How we measure performance
 
-We use MySQL **`EXPLAIN ANALYZE`** as scripted in `indexes.sql`. The course emphasizes comparing **optimizer-estimated cost** (`cost=` on plan nodes), not only wall-clock `actual time`, because timing can vary between runs. We compare the **same query** across: **baseline** (no experimental indexes) and **three secondary index designs** each named `idx_stage3_*`. After each trial we **`DROP INDEX`** so the next design is measured fairly.
+We use MySQL **`EXPLAIN ANALYZE`** as scripted in `sql/indexes.sql`. The course emphasizes comparing **optimizer-estimated cost** (`cost=` on plan nodes), not only wall-clock `actual time`, because timing can vary between runs. We compare the **same query** across: **baseline** (no experimental indexes) and **three secondary index designs** each named `idx_stage3_*`. After each trial we **`DROP INDEX`** so the next design is measured fairly.
 
 **Tradeoffs:** Every non-primary secondary index speeds specific read plans but adds **storage** and **write/maintenance** cost on `INSERT`/`UPDATE`/`DELETE` and bulk reloads. We only recommend keeping indexes that clearly help the analytics queries we care about.
 
 ### True baseline vs “before indexing” (Query 1 and all queries)
 
-After `schema.sql` and `generated_kaggle_data.sql`, the database already has **primary keys**, **foreign keys**, and **unique** constraints (including **`uq_observations_grain`** on `(region_id, indicator_id, obs_date)`). Those uniqueness constraints create indexes in InnoDB. So the **baseline is not “no indexes at all”** — it means **no extra `idx_stage3_*` experimental indexes** from `indexes.sql`.
+After `sql/schema.sql` and `sql/generated_kaggle_data.sql`, the database already has **primary keys**, **foreign keys**, and **unique** constraints (including **`uq_observations_grain`** on `(region_id, indicator_id, obs_date)`). Those uniqueness constraints create indexes in InnoDB. So the **baseline is not “no indexes at all”** — it means **no extra `idx_stage3_*` experimental indexes** from `sql/indexes.sql`.
 
-**If `q1_before.png` (or any baseline screenshot) was captured after a partial run of `indexes.sql`,** the plan might already show an experimental index (e.g. `idx_stage3_q1_a_obs_ind_date`). That would **not** be a valid baseline.
+**If `q1_before.png` (or any baseline screenshot) was captured after a partial run of `sql/indexes.sql`,** the plan might already show an experimental index (e.g. `idx_stage3_q1_a_obs_ind_date`). That would **not** be a valid baseline.
 
 **To regenerate a true baseline for Query 1 (and similarly for Queries 2–3 before their baselines):**
 
@@ -198,9 +198,9 @@ After `schema.sql` and `generated_kaggle_data.sql`, the database already has **p
    - `SHOW INDEX FROM observations WHERE Key_name LIKE 'idx_stage3_%';`
    - `SHOW INDEX FROM indicators WHERE Key_name LIKE 'idx_stage3_%';`
 2. For every `idx_stage3_*` row returned, run `DROP INDEX index_name ON table_name;` (use the exact names shown).
-3. Run **only** the first `EXPLAIN ANALYZE` block for that query in `indexes.sql` (the block labeled baseline).
+3. Run **only** the first `EXPLAIN ANALYZE` block for that query in `sql/indexes.sql` (the block labeled baseline).
 
-Canonical SQL for Query 1 baseline is the first `EXPLAIN ANALYZE` under “QUERY 1” in `indexes.sql`.
+Canonical SQL for Query 1 baseline is the first `EXPLAIN ANALYZE` under “QUERY 1” in `sql/indexes.sql`.
 
 ---
 
@@ -376,7 +376,7 @@ Files live under `doc/screenshots/` (paths below are relative to this markdown f
 
 ## Appendix — DDL (`CREATE TABLE` statements)
 
-The following is the **exact** table DDL we use (same as `schema.sql`). We implement **eight** tables; **five** central ones are `users`, `regions`, `indicators`, `observations`, and `dashboards`.
+The following is the **exact** table DDL we use (same as `sql/schema.sql`). We implement **eight** tables; **five** central ones are `users`, `regions`, `indicators`, `observations`, and `dashboards`.
 
 ### `users`
 
