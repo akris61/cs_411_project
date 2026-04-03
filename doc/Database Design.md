@@ -75,13 +75,142 @@ Run sections of sql/indexes.sql after data is loaded. For each of the three quer
 
 Suggested final indexes (team choice after measuring): We chose the indexes that resulted in the fastest query execution time for each of the 3 queries we tested. 
 
-Screenshot placeholders
+---
 
-> ![Query 1 baseline EXPLAIN ANALYZE](./screenshots/q1_baseline.png)
-> ![Query 1 after index A](./screenshots/q1_idx_a.png)
-> (repeat for designs B, C and for Queries 2–3)
+## Step 7 — Screenshot checklist (all images at bottom)
 
-> ![Top 15 rows — Query 1](./screenshots/query1_top15.png)
-> ![Top 15 rows — Query 2](./screenshots/query2_top15.png)
-> ![Top 15 rows — Query 3](./screenshots/query3_top15.png)
+Files live under `doc/screenshots/` (paths below are relative to this markdown file). Captions below map each **Stage 3 checklist item** to the image file we checked in.
 
+### Database implementation
+
+1. **Database connection screenshot**
+
+   Connection info (`connection.png` — local MySQL, database `renewable_energy_dashboard`):
+
+   > ![Database connection](./screenshots/connection.png)
+
+   `SHOW TABLES` in the same database (`show_tables.png`):
+
+   > ![SHOW TABLES](./screenshots/show_tables.png)
+
+2. **Count screenshot for Table 1 (≥1000 rows)**
+
+   `users` — `COUNT(*)` = 1200 (`count_table1.png`):
+
+   > ![COUNT users](./screenshots/count_table1.png)
+
+3. **Count screenshot for Table 2 (≥1000 rows)**
+
+   Same run as the checklist: one query returns per-table row counts; `observations` ≥ 1000 (`count_table2.png`). *Source:* multi-table aggregate screenshot (`count_all_tables.png`).
+
+   > ![Row counts including observations](./screenshots/count_table2.png)
+
+4. **Count screenshot for Table 3 (≥1000 rows)**
+
+   Same run: e.g. `dashboard_regions` (and other large tables) ≥ 1000 (`count_table3.png`). *Source:* same file as item 3 — `count_all_tables.png`.
+
+   > ![Row counts including dashboard_regions](./screenshots/count_table3.png)
+
+   Full multi-table count output (for reference; `count_all_tables.png`):
+
+   > ![All table row counts](./screenshots/count_all_tables.png)
+
+### Advanced queries
+
+5. **Advanced Query 1 — top 15 rows**
+
+   > ![Advanced Query 1 — top 15 rows](./screenshots/query1_top15.png)
+
+6. **Advanced Query 2 — top 15 rows**
+
+   > ![Advanced Query 2 — top 15 rows](./screenshots/query2_top15.png)
+
+7. **Advanced Query 3 — top 15 rows**
+
+   > ![Advanced Query 3 — top 15 rows](./screenshots/query3_top15.png)
+
+### Indexing analysis — Query 1
+
+For each design we captured the `EXPLAIN ANALYZE` output and wrote a short paragraph explaining how the plan and timing changed.
+
+8. **Query 1 — before adding new indexes**
+
+   Baseline `EXPLAIN ANALYZE` (`q1_before.png` — label in terminal: `stage3_q1_before`):
+
+   > ![Query 1 — baseline EXPLAIN ANALYZE](./screenshots/q1_before.png)
+
+9. **Query 1 — Index Design 1**
+
+   > ![Query 1 — Index Design 1](./screenshots/q1_design1.png)
+
+10. **Query 1 — Index Design 2**
+
+   > ![Query 1 — Index Design 2](./screenshots/q1_design2.png)
+
+11. **Query 1 — Index Design 3**
+
+   > ![Query 1 — Index Design 3](./screenshots/q1_design3.png)
+
+### Indexing analysis — Query 2
+
+12. **Query 2 — before adding new indexes**
+
+   Baseline (`q2_before.png` — `stage3_q2_before`):
+
+   > ![Query 2 — baseline EXPLAIN ANALYZE](./screenshots/q2_before.png)
+
+13. **Query 2 — Index Design 1**
+
+   (`q2_design1.png` — `stage3_q2_design1`):
+
+   > ![Query 2 — Index Design 1](./screenshots/q2_design1.png)
+
+14. **Query 2 — Index Design 2**
+
+   (`q2_design2.png` — `stage3_q2_design2`):
+
+   > ![Query 2 — Index Design 2](./screenshots/q2_design2.png)
+
+15. **Query 2 — Index Design 3**
+
+   (`q2_design3.png` — `stage3_q2_design3`):
+
+   > ![Query 2 — Index Design 3](./screenshots/q2_design3.png)
+
+### Indexing analysis — Query 3
+
+16. **Query 3 — before adding new indexes**
+
+   Baseline (`q3_before.png` — `stage3_q3_before`):
+
+   > ![Query 3 — baseline EXPLAIN ANALYZE](./screenshots/q3_before.png)
+
+17. **Query 3 — Index Design 1**
+
+   (`q3_design1.png` — `stage3_q3_design1`):
+
+   > ![Query 3 — Index Design 1](./screenshots/q3_design1.png)
+
+18. **Query 3 — Index Design 2**
+
+   (`q3_design2.png` — `stage3_q3_design2`):
+
+   > ![Query 3 — Index Design 2](./screenshots/q3_design2.png)
+
+19. **Query 3 — Index Design 3**
+
+   (`q3_design3.png` — `stage3_q3_design3`):
+
+   > ![Query 3 — Index Design 3](./screenshots/q3_design3.png)
+
+### Extra COUNT(*) captures (not required for the three “≥1000 rows” slots)
+
+These were included in the same screenshot batch; row counts are below 1000 for the rubric, but they document additional tables.
+
+**`regions`** (`extra_count_regions.png`):
+
+> ![COUNT regions](./screenshots/extra_count_regions.png)
+
+**`indicators`** (`extra_count_indicators.png`):
+
+> ![COUNT indicators](./screenshots/extra_count_indicators.png)
