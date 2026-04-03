@@ -1,30 +1,30 @@
 # Database Design — Renewable Energy Dashboard (CS 411 Stage 3)
 
-**Team:** *(fill in)*  
-**Course / term:** CS 411, Spring 2026  
-**DBMS:** MySQL 8.x (local)  
-**Primary data:** Kaggle — *Global Data on Sustainable Energy* (+ optional *Global Energy Consumption 2000–2024*)
+Team: Team 94 HOA
+Course / term: CS 411, Spring 2026
+DBMS: MySQL 8.x (local)
+Primary data: Kaggle — Global Data on Sustainable Energy
 
 ---
 
 ## Step 1 — Which dataset we chose (and why)
 
-| Criterion | **Global Data on Sustainable Energy** (anshtanwar) | **Global Energy Consumption** (atharvasoundankar) |
-|-----------|-----------------------------------------------------|---------------------------------------------------|
-| **Fit to schema** | Strong: one row per **country × year** with many numeric columns → maps cleanly to **`regions`** + **`indicators`** + **`observations`** (unpivot). Includes **latitude/longitude** for `regions`. | Weaker: only **nine** columns, no coordinates; country names may not match the first dataset (e.g. USA vs United States). |
-| **Ease of import** | Wide CSV was reshaped into long-form **`observations`** offline; we ship the result as **`sql/generated_kaggle_data.sql`** (MySQL-only load). | Easier structurally, but **duplicate (Country, Year)** rows can appear in the raw file if you re-import yourself. |
-| **Row volume** | ~3.6k rows × ~15 metrics ⇒ **tens of thousands of observations** after unpivot. | ~10k rows; fewer metrics per row. |
-| **Advanced queries** | Rich mix: renewables %, TWh by source, CO₂, GDP, access — good for **GROUP BY**, **UNION** cohorts, **correlated** “vs country average” queries. | Useful as a **second source** (we add `GEC_*` indicators) but not enough alone for a full dashboard story. |
+| Criterion | Global Data on Sustainable Energy (anshtanwar) | Global Energy Consumption (atharvasoundankar) |
+|-----------|-------------------------------------------------|---------------------------------------------------|
+| Fit to schema | Strong: one row per country × year with many numeric columns → maps cleanly to regions + indicators + observations (unpivot). Includes latitude/longitude for regions. | Weaker: only nine columns, no coordinates; country names may not match the first dataset (e.g. USA vs United States). |
+| Ease of import | Wide CSV was reshaped into long-form observations offline; we ship the result as sql/generated_kaggle_data.sql (MySQL-only load). | Easier structurally, but duplicate (Country, Year) rows can appear in the raw file if you re-import yourself. |
+| Row volume | ~3.6k rows × ~15 metrics ⇒ tens of thousands of observations after unpivot. | ~10k rows; fewer metrics per row. |
+| Advanced queries | Rich mix: renewables %, TWh by source, CO₂, GDP, access — good for GROUP BY, UNION cohorts, correlated “vs country average” queries. | Useful as a second source (we add GEC_* indicators) but not enough alone for a full dashboard story. |
 
-**Decision:** Use **Sustainable Energy** as the **primary** dataset. Our checked-in **`generated_kaggle_data.sql`** also includes rows from **Global Energy Consumption** where country names matched (with aliases like USA → United States).
+Decision: Use Sustainable Energy as the primary dataset. Our checked-in generated_kaggle_data.sql also includes rows from Global Energy Consumption where country names matched (with aliases like USA → United States).
 
 ---
 
 ## Step 2 — Data provenance
 
-**Load path:** `sql/generated_kaggle_data.sql` (no extra tools). Optional copies of the raw Kaggle CSVs may live under **`data/`** for citation only (`data/README.md`).
+Load path: sql/generated_kaggle_data.sql (no extra tools). Optional copies of the raw Kaggle CSVs may live under data/ for citation only (data/README.md).
 
-**Original wide CSV** (*Sustainable Energy*): `Entity`, `Year`, many numeric metric columns, `Latitude`, `Longitude`. **GEC CSV**: `Country`, `Year`, consumption and share columns. Those were unpivoted into **`indicators`** + **`observations`** before we froze the bulk SQL file. Indicator codes in the database include e.g. `ELEC_RENEW_TWH`, `CO2_KT`, `RENEW_SHARE_TFEC_PCT`, and prefixed `GEC_*` metrics from the second dataset.
+Original wide CSV (Sustainable Energy): Entity, Year, many numeric metric columns, Latitude, Longitude. GEC CSV: Country, Year, consumption and share columns. Those were unpivoted into indicators + observations before we froze the bulk SQL file. Indicator codes in the database include e.g. ELEC_RENEW_TWH, CO2_KT, RENEW_SHARE_TFEC_PCT, and prefixed GEC_* metrics from the second dataset.
 
 ---
 
@@ -32,13 +32,13 @@
 
 | Our table | Source |
 |-----------|--------|
-| **`regions`** | Distinct `Entity`; `code` = slug from name (≤64 chars); `name`/`country` = `Entity`; `latitude`/`longitude` from first row seen for that entity. |
-| **`indicators`** | One row per metric; `code` short stable key (e.g. `ELEC_RENEW_TWH`); `unit`/`category`/`description` set in the bulk load to match Kaggle semantics. |
-| **`observations`** | One row per **(region, indicator, year-01-01)** with non-null numeric value; `data_source` string identifies the CSV; `recorded_by_user_id` = NULL. |
+| regions | Distinct Entity; code = slug from name (≤64 chars); name/country = Entity; latitude/longitude from first row seen for that entity. |
+| indicators | One row per metric; code short stable key (e.g. ELEC_RENEW_TWH); unit/category/description set in the bulk load to match Kaggle semantics. |
+| observations | One row per (region, indicator, year-01-01) with non-null numeric value; data_source string identifies the CSV; recorded_by_user_id = NULL. |
 
-**Minimal schema change:** `regions.code` widened to **`VARCHAR(64)`** so long country names still produce unique codes after slugging.
+Minimal schema change: regions.code widened to VARCHAR(64) so long country names still produce unique codes after slugging.
 
-**Stage 3 “1000+ rows in three tables”:** After load, **`users`** (1200 synthetic), **`observations`** (very large), and **`dashboard_regions`** (≥1200 link rows) each exceed 1000 rows. **`regions`** stays ~176 (real countries) — that is OK because the assignment counts **three** tables, not every table.
+Stage 3 “1000+ rows in three tables”: After load, users (1200 synthetic), observations (very large), and dashboard_regions (≥1200 link rows) each exceed 1000 rows. regions stays ~176 (real countries) — that is OK because the assignment counts three tables, not every table.
 
 ---
 
@@ -46,101 +46,42 @@
 
 | Path | Role |
 |------|------|
-| `sql/schema.sql` | Full DDL (eight tables). |
-| `sql/load_data.sql` | MySQL `SOURCE` order for schema + data. |
-| `sql/generated_kaggle_data.sql` | Bulk `INSERT`s (~5 MB): users, regions, indicators, observations, dashboards, links. |
-| `sql/queries.sql` | Three advanced queries aligned to loaded data. |
-| `sql/indexes.sql` | `EXPLAIN ANALYZE` + index experiments. |
-| `doc/Database Design.md` | This writeup. |
+| sql/schema.sql | Full DDL (eight tables). |
+| sql/load_data.sql | MySQL SOURCE order for schema + data. |
+| sql/generated_kaggle_data.sql | Bulk INSERTs (~5 MB): users, regions, indicators, observations, dashboards, links. |
+| sql/queries.sql | Three advanced queries aligned to loaded data. |
+| sql/indexes.sql | EXPLAIN ANALYZE + index experiments. |
+| doc/Database Design.md | This writeup. |
+
+
+## Step 5 — Advanced queries (summary)
+
+All three are in sql/queries.sql with header comments. They use:
+
+1. Uses Joins, GROUP BY and HAVING — renewable-category countries above global average (2010–2019).
+2. Uses UNION, joins, GROUP BY and SUM / COUNT(DISTINCT) — high cumulative renewable TWh vs many distinct metrics.
+3. Joins and subquery — CO₂ years above that country’s long-run average on the same indicator.
 
 ---
 
-## Step 5 — Import workflow (MySQL)
+## Step 6 — Indexing analysis (what to screenshot)
 
-In **mysql** (adjust user/password/db name; paths from repo root):
+Run sections of sql/indexes.sql after data is loaded. For each of the three queries:
 
-```sql
-CREATE DATABASE IF NOT EXISTS renew_energy_dash
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE renew_energy_dash;
-SOURCE sql/schema.sql;
-SOURCE sql/generated_kaggle_data.sql;
-```
+1. Capture baseline EXPLAIN ANALYZE (cost from plan).
+2. Add three secondary indexes (not PK/unique), EXPLAIN ANALYZE after each, then DROP INDEX before the next design on the same table.
+3. Write one paragraph per query comparing costs; explain tradeoffs (e.g. faster SELECT vs slower bulk load).
 
-On Windows, use forward slashes in `SOURCE` paths if backslashes fail, or `SOURCE C:/full/path/to/sql/generated_kaggle_data.sql`.
 
----
+Suggested final indexes (team choice after measuring): We chose the indexes that resulted in the fastest query execution time for each of the 3 queries we tested. 
 
-## Step 6 — Advanced queries (summary)
+Screenshot placeholders
 
-All three are in **`sql/queries.sql`** with header comments. They use:
+> ![Query 1 baseline EXPLAIN ANALYZE](./screenshots/q1_baseline.png)
+> ![Query 1 after index A](./screenshots/q1_idx_a.png)
+> (repeat for designs B, C and for Queries 2–3)
 
-1. **Joins + `GROUP BY` + `HAVING` + scalar subquery** — renewable-category countries above global average (2010–2019).  
-2. **`UNION` + joins + `GROUP BY` + `SUM` / `COUNT(DISTINCT)`** — high cumulative renewable TWh vs many distinct metrics.  
-3. **Joins + correlated subquery** — CO₂ years above that country’s long-run average on the same indicator.
-
----
-
-## Step 7 — Indexing analysis (what to screenshot)
-
-Run sections of **`sql/indexes.sql`** after data is loaded. For **each** of the three queries:
-
-1. Capture **baseline** `EXPLAIN ANALYZE` (cost from plan).  
-2. Add **three** secondary indexes (not PK/unique), `EXPLAIN ANALYZE` after each, then **`DROP INDEX`** before the next design on the same table.  
-3. Write **one paragraph per query** comparing costs; explain tradeoffs (e.g. faster SELECT vs slower bulk load).  
-
-**Expected behavior:** Indexes on **`(indicator_id, obs_date)`**, **`(region_id, obs_date)`**, and **`(region_id, indicator_id, obs_date)`** often help filters and grouped/correlated lookups. On small-to-medium data MySQL may still choose similar plans — if costs barely move, **say so honestly** in the report (rubric allows that).
-
-**Suggested final indexes** (team choice after measuring): e.g. `observations(indicator_id, obs_date)` and `observations(region_id, indicator_id, obs_date)` if they lowered cost on Queries 1–3 without exploding write time for your use case.
-
-**Screenshot placeholders**
-
-> ![Query 1 baseline EXPLAIN ANALYZE](./screenshots/q1_baseline.png)  
-> ![Query 1 after index A](./screenshots/q1_idx_a.png)  
-> *(repeat for designs B, C and for Queries 2–3)*
-
-> ![Top 15 rows — Query 1](./screenshots/query1_top15.png)  
-> ![Top 15 rows — Query 2](./screenshots/query2_top15.png)  
+> ![Top 15 rows — Query 1](./screenshots/query1_top15.png)
+> ![Top 15 rows — Query 2](./screenshots/query2_top15.png)
 > ![Top 15 rows — Query 3](./screenshots/query3_top15.png)
 
----
-
-## Step 8 — Submission checklist
-
-**Run locally**
-
-- [ ] `SOURCE sql/schema.sql`  
-- [ ] `SOURCE sql/generated_kaggle_data.sql`  
-- [ ] Row counts: `SELECT COUNT(*) FROM users;` / `regions` / `observations` / `dashboard_regions`  
-- [ ] `SOURCE sql/queries.sql` (or run each query) — confirm sensible result sets  
-- [ ] Run `sql/indexes.sql` in chunks; save `EXPLAIN ANALYZE` outputs  
-
-**Screenshots for Canvas**
-
-- [ ] Terminal or MySQL Workbench showing successful connection + `SOURCE`  
-- [ ] `SHOW TABLES;`  
-- [ ] Count queries proving **≥1000 rows** in **three** tables  
-- [ ] **Top 15 rows** (or note if fewer) for each advanced query  
-- [ ] **EXPLAIN ANALYZE** before indexing + after each index design (per query)  
-
-**GitHub / release**
-
-- [ ] `doc/` contains this **Database Design** document  
-- [ ] `sql/schema.sql`, `sql/load_data.sql`, `sql/generated_kaggle_data.sql`, `sql/queries.sql`, `sql/indexes.sql`, `data/README.md`  
-- [ ] Kaggle CSVs: usually **do not commit** large binaries — keep under `data/` locally and describe in README  
-
----
-
-## Row count verification SQL
-
-```sql
-SELECT 'users' AS tbl, COUNT(*) AS n FROM users
-UNION ALL SELECT 'regions', COUNT(*) FROM regions
-UNION ALL SELECT 'observations', COUNT(*) FROM observations
-UNION ALL SELECT 'dashboard_regions', COUNT(*) FROM dashboard_regions
-UNION ALL SELECT 'indicators', COUNT(*) FROM indicators;
-```
-
----
-
-*Replace screenshot paths with your actual files before submitting.*
