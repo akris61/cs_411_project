@@ -5,12 +5,7 @@
 
 -- --- BASELINE TEST---
 EXPLAIN ANALYZE
-SELECT
-    r.region_id,
-    r.code,
-    r.name,
-    r.country,
-    ROUND(AVG(o.value), 4) AS avg_renewables_metric,
+SELECT r.region_id, r.code, r.name, r.country, ROUND(AVG(o.value), 4) AS avg_renewables_metric,
     COUNT(*) AS num_points
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
@@ -32,12 +27,7 @@ CREATE INDEX idx_stage3_q1_a_obs_ind_date
     ON observations (indicator_id, obs_date);
 
 EXPLAIN ANALYZE
-SELECT
-    r.region_id,
-    r.code,
-    r.name,
-    r.country,
-    ROUND(AVG(o.value), 4) AS avg_renewables_metric,
+SELECT r.region_id, r.code, r.name, r.country, ROUND(AVG(o.value), 4) AS avg_renewables_metric,
     COUNT(*) AS num_points
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
@@ -61,12 +51,7 @@ CREATE INDEX idx_stage3_q1_b_obs_date_ind
     ON observations (obs_date, indicator_id);
 
 EXPLAIN ANALYZE
-SELECT
-    r.region_id,
-    r.code,
-    r.name,
-    r.country,
-    ROUND(AVG(o.value), 4) AS avg_renewables_metric,
+SELECT r.region_id, r.code, r.name, r.country, ROUND(AVG(o.value), 4) AS avg_renewables_metric,
     COUNT(*) AS num_points
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
@@ -91,12 +76,7 @@ CREATE INDEX idx_stage3_q1_c_ind_cat_code
     ON indicators (category, code);
 
 EXPLAIN ANALYZE
-SELECT
-    r.region_id,
-    r.code,
-    r.name,
-    r.country,
-    ROUND(AVG(o.value), 4) AS avg_renewables_metric,
+SELECT r.region_id, r.code, r.name, r.country, ROUND(AVG(o.value), 4) AS avg_renewables_metric,
     COUNT(*) AS num_points
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
@@ -138,11 +118,7 @@ EXPLAIN ANALYZE
 )
 UNION
 (
-    SELECT
-        r.code,
-        r.name,
-        'many_metrics',
-        CAST(COUNT(DISTINCT o.indicator_id) AS DECIMAL(18, 2))
+    SELECT r.code, r.name, 'many_metrics', CAST(COUNT(DISTINCT o.indicator_id) AS DECIMAL(18, 2))
     FROM observations AS o
     JOIN regions AS r ON r.region_id = o.region_id
     WHERE o.obs_date BETWEEN '2005-01-01' AND '2015-01-01'
@@ -158,11 +134,7 @@ CREATE INDEX idx_stage3_q2_a_obs_ind_date
 
 EXPLAIN ANALYZE
 (
-    SELECT
-        r.code AS region_code,
-        r.name AS region_name,
-        'high_renewable_twh' AS cohort,
-        ROUND(SUM(o.value), 2) AS metric_value
+    SELECT r.code AS region_code, r.name AS region_name, 'high_renewable_twh' AS cohort, ROUND(SUM(o.value), 2) AS metric_value
     FROM observations AS o
     JOIN regions AS r ON r.region_id = o.region_id
     JOIN indicators AS i ON i.indicator_id = o.indicator_id
@@ -268,12 +240,7 @@ DROP INDEX idx_stage3_q2_c_obs_date_reg ON observations;
 
 -- --- BASELINE ---
 EXPLAIN ANALYZE
-SELECT
-    o.observation_id,
-    r.code AS region_code,
-    i.code AS indicator_code,
-    o.obs_date,
-    o.value
+SELECT o.observation_id, r.code AS region_code, i.code AS indicator_code, o.obs_date, o.value
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
 JOIN indicators AS i ON i.indicator_id = o.indicator_id
@@ -294,12 +261,7 @@ CREATE INDEX idx_stage3_q3_a_obs_reg_ind_date
     ON observations (region_id, indicator_id, obs_date);
 
 EXPLAIN ANALYZE
-SELECT
-    o.observation_id,
-    r.code AS region_code,
-    i.code AS indicator_code,
-    o.obs_date,
-    o.value
+SELECT o.observation_id, r.code AS region_code, i.code AS indicator_code, o.obs_date, o.value
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
 JOIN indicators AS i ON i.indicator_id = o.indicator_id
@@ -322,12 +284,7 @@ CREATE INDEX idx_stage3_q3_b_obs_date_reg_ind
     ON observations (obs_date, region_id, indicator_id);
 
 EXPLAIN ANALYZE
-SELECT
-    o.observation_id,
-    r.code AS region_code,
-    i.code AS indicator_code,
-    o.obs_date,
-    o.value
+SELECT o.observation_id, r.code AS region_code, i.code AS indicator_code, o.obs_date, o.value
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
 JOIN indicators AS i ON i.indicator_id = o.indicator_id
@@ -350,12 +307,7 @@ CREATE INDEX idx_stage3_q3_c_obs_ind_reg_date
     ON observations (indicator_id, region_id, obs_date);
 
 EXPLAIN ANALYZE
-SELECT
-    o.observation_id,
-    r.code AS region_code,
-    i.code AS indicator_code,
-    o.obs_date,
-    o.value
+SELECT o.observation_id, r.code AS region_code, i.code AS indicator_code, o.obs_date, o.value
 FROM observations AS o
 JOIN regions AS r ON r.region_id = o.region_id
 JOIN indicators AS i ON i.indicator_id = o.indicator_id
