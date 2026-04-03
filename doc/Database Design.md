@@ -366,7 +366,7 @@ Files live under `doc/screenshots/` (paths below are relative to this markdown f
 
    > ![Query 3 — Index Design 3](./screenshots/q3_design3.png)
 
-### Extra COUNT(*) captures (optional)
+### Extra COUNT(*) captures 
 
 > ![COUNT regions](./screenshots/extra_count_regions.png)
 
