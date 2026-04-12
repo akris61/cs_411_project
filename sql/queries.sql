@@ -1,17 +1,7 @@
--- Renewable Energy Dashboard — Advanced MySQL Queries
--- Dataset: Kaggle “Global Data on Sustainable Energy”
--- Data: sql/generated_kaggle_data.sql
---
--- Each query uses at least two advanced SQL concepts such as
--- joins, UNION, GROUP BY aggregation, or subqueries.
+-- Advanced queries — Kaggle “Global Data on Sustainable Energy” (see sql/generated_kaggle_data.sql).
+-- Uses joins, UNION, GROUP BY, and subqueries.
 
--- ==========================================================
--- Query 1 — Renewable leaders vs global average (2010–2019)
--- Finds countries whose average renewable energy metric
--- is above the global average during 2010–2019.
--- Uses joins, GROUP BY, AVG/COUNT, and a subquery.
--- App use: leaderboard of top-performing countries.
--- ==========================================================
+-- Query 1 — Countries above global renewable average (2010–2019)
 SELECT 
     r.region_id,
     r.code,
@@ -35,13 +25,7 @@ HAVING AVG(o.value) > (
 ORDER BY avg_renewables_metric DESC
 LIMIT 15;
 
--- ==========================================================
--- Query 2 — High renewable output or broad data coverage
--- Finds countries with either high renewable electricity
--- production or many distinct reported metrics.
--- Uses UNION, joins, GROUP BY, SUM, COUNT(DISTINCT).
--- App use: countries worth monitoring closely.
--- ==========================================================
+-- Query 2 — High renewable TWH (2012–2019) OR many distinct metrics (2005–2015); UNION
 (
     SELECT 
         r.code AS region_code,
@@ -72,13 +56,7 @@ UNION
 ORDER BY cohort, metric_value DESC
 LIMIT 15;
 
--- ==========================================================
--- Query 3 — CO2 emission spike years
--- Finds years where a country’s CO2 emissions are above
--- its long-term average.
--- Uses joins and a correlated subquery.
--- App use: detect unusual emission spikes.
--- ==========================================================
+-- Query 3 — CO2 above per-country long-run average (correlated subquery)
 SELECT 
     o.observation_id,
     r.code AS region_code,

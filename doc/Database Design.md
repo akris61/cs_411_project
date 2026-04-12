@@ -9,7 +9,7 @@
 
 ## Step 1 — Dataset Choice and Why We Chose It
 
-For this project, we looked at two datasets: **Global Data on Sustainable Energy** and **Global Energy Consumption**. After comparing both, we decided to use **Global Data on Sustainable Energy** as our main dataset because it fit our schema better and had more useful attributes for advanced queries.
+For this project, we looked at two datasets: **Global Data on Sustainable Energy** and **Global Energy Consumption**. After comparing them, we decided to use **Global Data on Sustainable Energy** as our main dataset because it fit our schema better and had more useful attributes for advanced queries.
 
 | Criterion | Global Data on Sustainable Energy | Global Energy Consumption |
 |-----------|----------------------------------|----------------------------|
@@ -26,7 +26,7 @@ We decided to use **Global Data on Sustainable Energy** as the primary dataset. 
 
 The main load file for our project is **`sql/generated_kaggle_data.sql`**.
 
-The original CSV from Kaggle includes columns like `Entity`, `Year`, several renewable energy and emissions metrics, and `Latitude` / `Longitude`.
+The original CSV from Kaggle includes columns like `Entity`, `Year`, several renewable energy and emissions metrics, and `Latitude` / `Longitude` location data.
 
 Before loading the data into MySQL, we converted the wide CSV format into the relational structure used by our database. This mainly involved separating the data into `indicators` and `observations`.
 
@@ -42,7 +42,7 @@ We also included some `GEC_*` metrics from the second dataset.
 
 ## Step 3 — How the CSV Maps to Our Tables
 
-We implement **more than five** main relational tables. The **five core** tables for the energy story are: **`users`** (accounts), **`regions`**, **`indicators`**, **`observations`** (fact table), and **`dashboards`**. We also use three junction / link tables: **`user_saved_dashboards`**, **`dashboard_regions`**, and **`dashboard_indicators`**.
+We implement **more than five** main relational tables. The **five core** tables for the energy story are: **`users`**, **`regions`**, **`indicators`**, **`observations`**, and **`dashboards`**. We also use three junction / link tables: **`user_saved_dashboards`**, **`dashboard_regions`**, and **`dashboard_indicators`**.
 
 | Table | Description |
 |------|-------------|
@@ -182,7 +182,7 @@ Each query ends with `LIMIT 15` for the result screenshots. If a run ever return
 
 ### How we measure performance
 
-We use MySQL **`EXPLAIN ANALYZE`** as scripted in `sql/indexes.sql`. The course emphasizes comparing **optimizer-estimated cost** (`cost=` on plan nodes), not only wall-clock `actual time`, because timing can vary between runs. We compare the **same query** across: **baseline** (no experimental indexes) and **three secondary index designs** each named `idx_stage3_*`. After each trial we **`DROP INDEX`** so the next design is measured fairly.
+We used MySQL **`EXPLAIN ANALYZE`** as scripted in `sql/indexes.sql`, with a focus on **optimizer-estimated cost** (`cost=` on plan nodes), not only wall-clock `actual time`, because timing can vary between runs. We compared the **same query** across: **baseline** (no experimental indexes) and **three secondary index designs** each named `idx_stage3_*`. After each trial we **`DROP INDEX`** so the next design is measured fairly.
 
 **Tradeoffs:** Every non-primary secondary index speeds specific read plans but adds **storage** and **write/maintenance** cost on `INSERT`/`UPDATE`/`DELETE` and bulk reloads. We only recommend keeping indexes that clearly help the analytics queries we care about.
 
@@ -190,15 +190,15 @@ We use MySQL **`EXPLAIN ANALYZE`** as scripted in `sql/indexes.sql`. The course 
 
 After `sql/schema.sql` and `sql/generated_kaggle_data.sql`, the database already has **primary keys**, **foreign keys**, and **unique** constraints (including **`uq_observations_grain`** on `(region_id, indicator_id, obs_date)`). Those uniqueness constraints create indexes in InnoDB. So the **baseline is not “no indexes at all”** — it means **no extra `idx_stage3_*` experimental indexes** from `sql/indexes.sql`.
 
-**If `q1_before.png` (or any baseline screenshot) was captured after a partial run of `sql/indexes.sql`,** the plan might already show an experimental index (e.g. `idx_stage3_q1_a_obs_ind_date`). That would **not** be a valid baseline.
+**If `q1_before.png` was captured after a partial run of `sql/indexes.sql`,** the plan might already show an experimental index. That would **not** be a valid baseline.
 
 **To regenerate a true baseline for Query 1 (and similarly for Queries 2–3 before their baselines):**
 
 1. In MySQL, run:
    - `SHOW INDEX FROM observations WHERE Key_name LIKE 'idx_stage3_%';`
    - `SHOW INDEX FROM indicators WHERE Key_name LIKE 'idx_stage3_%';`
-2. For every `idx_stage3_*` row returned, run `DROP INDEX index_name ON table_name;` (use the exact names shown).
-3. Run **only** the first `EXPLAIN ANALYZE` block for that query in `sql/indexes.sql` (the block labeled baseline).
+2. For every `idx_stage3_*` row returned, run `DROP INDEX index_name ON table_name;`.
+3. Run **only** the first `EXPLAIN ANALYZE` block for that query in `sql/indexes.sql`.
 
 Canonical SQL for Query 1 baseline is the first `EXPLAIN ANALYZE` under “QUERY 1” in `sql/indexes.sql`.
 
@@ -234,7 +234,7 @@ Canonical SQL for Query 1 baseline is the first `EXPLAIN ANALYZE` under “QUERY
 
 **Design 2 — `idx_stage3_q2_b_obs_reg_date` on `observations (region_id, obs_date)` (`q2_design2.png`):** Aligns with **`GROUP BY region`** and date predicates in **both** branches. This often **improves the second branch** more than Design 1 and keeps the first branch reasonable, so **total cost** for the **whole `UNION`** frequently **beats baseline** and **beats Design 1** for balanced workload. **Tradeoff:** Index is large on `observations` because every row carries `region_id`.
 
-**Design 3 — `idx_stage3_q2_c_obs_date_reg` on `observations (obs_date, region_id)` (`q2_design3.png`):** Date-leading order can help **range pruning** but is often **weaker for grouping by `region_id`** than Design 2. In our comparison, cost was typically **similar or worse than Design 2** (check `cost=` on the union/sort path). **Tradeoff:** Same maintenance as other fact-table indexes with less predictable gain.
+**Design 3 — `idx_stage3_q2_c_obs_date_reg` on `observations (obs_date, region_id)` (`q2_design3.png`):** Date-leading order can help **range pruning** but is often **weaker for grouping by `region_id`** than Design 2. In our comparison, cost was typically **similar or worse than Design 2**. **Tradeoff:** Same maintenance as other fact-table indexes with less predictable gain.
 
 **Final choice for Query 2:** **`idx_stage3_q2_b_obs_reg_date`** — best **overall** compromise for **both** `UNION` branches that aggregate by region over time windows.
 
@@ -300,15 +300,15 @@ Files live under `doc/screenshots/` (paths below are relative to this markdown f
 
 5. **Advanced Query 1 — top 15 rows**
 
-   > ![Advanced Query 1 — top 15 rows](./screenshots/query1_top15.png)
+   > ![Advanced Query 1 — top 15 rows](./screenshots/query1.png)
 
 6. **Advanced Query 2 — top 15 rows**
 
-   > ![Advanced Query 2 — top 15 rows](./screenshots/query2_top15.png)
+   > ![Advanced Query 2 — top 15 rows](./screenshots/query2.png)
 
 7. **Advanced Query 3 — top 15 rows**
 
-   > ![Advanced Query 3 — top 15 rows](./screenshots/query3_top15.png)
+   > ![Advanced Query 3 — top 15 rows](./screenshots/query3.png)
 
 ### Indexing analysis — Query 1
 
@@ -378,9 +378,9 @@ Files live under `doc/screenshots/` (paths below are relative to this markdown f
 
 The following is the **exact** table DDL we use (same as `sql/schema.sql`). We implement **eight** tables; **five** central ones are `users`, `regions`, `indicators`, `observations`, and `dashboards`.
 
-### `users`
-
-```sql
+```
+-- users table
+-- stores users who create and save dashboards
 CREATE TABLE users (
     user_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
@@ -388,12 +388,10 @@ CREATE TABLE users (
     role ENUM('viewer', 'analyst', 'admin') NOT NULL DEFAULT 'viewer',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_users_email UNIQUE (email)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+);
 
-### `regions`
-
-```sql
+-- regions table
+-- stores countries or regions used in the dashboard
 CREATE TABLE regions (
     region_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(64) NOT NULL,
@@ -402,12 +400,10 @@ CREATE TABLE regions (
     latitude DECIMAL(9,6) NULL,
     longitude DECIMAL(9,6) NULL,
     CONSTRAINT uq_regions_code UNIQUE (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+);
 
-### `indicators`
-
-```sql
+-- indicators table
+-- stores measurable energy-related metrics
 CREATE TABLE indicators (
     indicator_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(48) NOT NULL,
@@ -416,12 +412,10 @@ CREATE TABLE indicators (
     category VARCHAR(64) NOT NULL,
     description VARCHAR(512) NULL,
     CONSTRAINT uq_indicators_code UNIQUE (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+);
 
-### `dashboards`
-
-```sql
+-- dashboards table
+-- stores dashboards created by users
 CREATE TABLE dashboards (
     dashboard_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     owner_user_id INT UNSIGNED NOT NULL,
@@ -429,16 +423,15 @@ CREATE TABLE dashboards (
     description VARCHAR(1000) NULL,
     is_public TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP 
+        ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_dashboards_owner
         FOREIGN KEY (owner_user_id) REFERENCES users (user_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+);
 
-### `observations`
-
-```sql
+-- observations table
+-- stores the actual energy values by region, metric, and date
 CREATE TABLE observations (
     observation_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     region_id INT UNSIGNED NOT NULL,
@@ -456,13 +449,12 @@ CREATE TABLE observations (
     CONSTRAINT fk_observations_recorded_by
         FOREIGN KEY (recorded_by_user_id) REFERENCES users (user_id)
         ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT uq_observations_grain UNIQUE (region_id, indicator_id, obs_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+    CONSTRAINT uq_observations_grain 
+        UNIQUE (region_id, indicator_id, obs_date)
+);
 
-### `user_saved_dashboards`
-
-```sql
+-- user_saved_dashboards table
+-- stores dashboards saved or bookmarked by users
 CREATE TABLE user_saved_dashboards (
     user_id INT UNSIGNED NOT NULL,
     dashboard_id INT UNSIGNED NOT NULL,
@@ -474,12 +466,10 @@ CREATE TABLE user_saved_dashboards (
     CONSTRAINT fk_saved_dashboard
         FOREIGN KEY (dashboard_id) REFERENCES dashboards (dashboard_id)
         ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+);
 
-### `dashboard_regions`
-
-```sql
+-- dashboard_regions table
+-- connects dashboards to the regions they display
 CREATE TABLE dashboard_regions (
     dashboard_id INT UNSIGNED NOT NULL,
     region_id INT UNSIGNED NOT NULL,
@@ -490,12 +480,10 @@ CREATE TABLE dashboard_regions (
     CONSTRAINT fk_dr_region
         FOREIGN KEY (region_id) REFERENCES regions (region_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+);
 
-### `dashboard_indicators`
-
-```sql
+-- dashboard_indicators table
+-- connects dashboards to the metrics they show
 CREATE TABLE dashboard_indicators (
     dashboard_id INT UNSIGNED NOT NULL,
     indicator_id INT UNSIGNED NOT NULL,
@@ -506,5 +494,5 @@ CREATE TABLE dashboard_indicators (
     CONSTRAINT fk_di_indicator
         FOREIGN KEY (indicator_id) REFERENCES indicators (indicator_id)
         ON DELETE RESTRICT ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 ```

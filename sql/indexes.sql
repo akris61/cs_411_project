@@ -1,16 +1,11 @@
--- Stage 3 index optimizations (MySQL 8+ EXPLAIN ANALYZE).
---
--- BASELINE for each query: schema must match sql/schema.sql + data load only (PRIMARY KEY,
--- UNIQUE uq_*, FKs). No experimental idx_stage3_* indexes.
--- Before the first EXPLAIN ANALYZE of a session, verify:
---   SHOW INDEX FROM observations WHERE Key_name LIKE 'idx_stage3_%';
---   SHOW INDEX FROM indicators WHERE Key_name LIKE 'idx_stage3_%';
--- If any rows appear, DROP those indexes, then re-run the baseline EXPLAIN ANALYZE.
+-- Stage 3 index study: EXPLAIN ANALYZE vs baseline.
+-- Baseline = sql/schema.sql + data only (PK, UNIQUE uq_*, FKs). No idx_stage3_*.
+-- If a prior run left experimental indexes: SHOW INDEX ... LIKE 'idx_stage3_%'; then DROP them before baseline.
 
 
--- QUERY 1 — renewable energy query benchmark 
+-- QUERY 1
 
--- --- BASELINE (no idx_stage3_* on observations / indicators) ---
+-- Baseline
 EXPLAIN ANALYZE
 SELECT r.region_id, r.code, r.name, r.country, ROUND(AVG(o.value), 4) AS avg_renewables_metric,
     COUNT(*) AS num_points
@@ -29,7 +24,7 @@ HAVING AVG(o.value) > (
 ORDER BY avg_renewables_metric DESC
 LIMIT 15;
 
--- --- Design QUERY1-A: match indicator then year-first filter on observations for indexing---
+-- Design A: (indicator_id, obs_date)
 CREATE INDEX idx_stage3_q1_a_obs_ind_date
     ON observations (indicator_id, obs_date);
 
@@ -53,7 +48,7 @@ LIMIT 15;
 
 DROP INDEX idx_stage3_q1_a_obs_ind_date ON observations;
 
--- --- Design QUERY1-B: match indicator then year-first filter on observations for indexing ---
+-- Design B: (obs_date, indicator_id)
 CREATE INDEX idx_stage3_q1_b_obs_date_ind
     ON observations (obs_date, indicator_id);
 
@@ -78,7 +73,7 @@ LIMIT 15;
 
 DROP INDEX idx_stage3_q1_b_obs_date_ind ON observations;
 
--- --- Design QUERY1-C: dimension filter on category to optimize indicator indexing ---
+-- Design C: indicators (category, code)
 CREATE INDEX idx_stage3_q1_c_ind_cat_code
     ON indicators (category, code);
 
@@ -104,10 +99,9 @@ LIMIT 15;
 DROP INDEX idx_stage3_q1_c_ind_cat_code ON indicators;
 
 
--- QUERY 2 — UNION cohorts
+-- QUERY 2
 
-
--- --- BASELINE TEST---
+-- Baseline
 EXPLAIN ANALYZE
 (
     SELECT
@@ -135,7 +129,7 @@ UNION
 ORDER BY cohort, metric_value DESC
 LIMIT 15;
 
--- --- Design QUERY2-A: support the ELEC_RENEW_TWH branch ---
+-- Design A: (indicator_id, obs_date)
 CREATE INDEX idx_stage3_q2_a_obs_ind_date
     ON observations (indicator_id, obs_date);
 
@@ -168,7 +162,7 @@ LIMIT 15;
 
 DROP INDEX idx_stage3_q2_a_obs_ind_date ON observations;
 
--- --- Design QUERY2-B: index observations on region then observation date to optimize for GROUP BY region ---
+-- Design B: (region_id, obs_date)
 CREATE INDEX idx_stage3_q2_b_obs_reg_date
     ON observations (region_id, obs_date);
 
@@ -205,7 +199,7 @@ LIMIT 15;
 
 DROP INDEX idx_stage3_q2_b_obs_reg_date ON observations;
 
--- --- Design Q2-C: index observations on region then observation date (swapped order of B) ---
+-- Design C: (obs_date, region_id) — column order swapped vs B
 CREATE INDEX idx_stage3_q2_c_obs_date_reg
     ON observations (obs_date, region_id);
 
@@ -243,9 +237,9 @@ LIMIT 15;
 DROP INDEX idx_stage3_q2_c_obs_date_reg ON observations;
 
 
--- QUERY 3 — CO2 vs per-country average (correlated subquery)
+-- QUERY 3
 
--- --- BASELINE ---
+-- Baseline
 EXPLAIN ANALYZE
 SELECT o.observation_id, r.code AS region_code, i.code AS indicator_code, o.obs_date, o.value
 FROM observations AS o
@@ -263,7 +257,7 @@ WHERE i.code = 'CO2_KT'
 ORDER BY o.value DESC
 LIMIT 15;
 
--- --- Design Q3-A: observation idexing on region then indicator then date date---
+-- Design A: (region_id, indicator_id, obs_date)
 CREATE INDEX idx_stage3_q3_a_obs_reg_ind_date
     ON observations (region_id, indicator_id, obs_date);
 
@@ -286,7 +280,7 @@ LIMIT 15;
 
 DROP INDEX idx_stage3_q3_a_obs_reg_ind_date ON observations;
 
--- --- Design Q3-B: date-first indexing to optimize for the outer query ---
+-- Design B: (obs_date, region_id, indicator_id)
 CREATE INDEX idx_stage3_q3_b_obs_date_reg_ind
     ON observations (obs_date, region_id, indicator_id);
 
@@ -309,7 +303,7 @@ LIMIT 15;
 
 DROP INDEX idx_stage3_q3_b_obs_date_reg_ind ON observations;
 
--- --- Design Q3-C: idex on observations, leading with indicator code to improve join filter ---
+-- Design C: (indicator_id, region_id, obs_date)
 CREATE INDEX idx_stage3_q3_c_obs_ind_reg_date
     ON observations (indicator_id, region_id, obs_date);
 
