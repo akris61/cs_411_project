@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sustainable energy — query demo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <p class="eyebrow">CS 411 · sustainable energy</p>
+      <h1>Renewable energy dashboard</h1>
+      <p class="tagline">Run saved SQL from <code>sql/queries.sql</code> against your MySQL project database.</p>
+    </div>
+  </header>
+
+  <main class="wrap main-stack">
+    <section class="panel" aria-labelledby="query-heading">
+      <h2 id="query-heading" class="panel-title">Choose a query</h2>
+      <p class="panel-help">Select a report, then run it. Results show in the table below.</p>
+
+      <form method="post" class="query-form">
+        <div class="field">
+          <label for="query_choice">Report</label>
+          <select name="query_choice" id="query_choice">
+            <option value="1" {% if choice == '1' %}selected{% endif %}>{{ query_labels[0] }}</option>
+            <option value="2" {% if choice == '2' %}selected{% endif %}>{{ query_labels[1] }}</option>
+            <option value="3" {% if choice == '3' %}selected{% endif %}>{{ query_labels[2] }}</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary">Run query</button>
+      </form>
+    </section>
+
+    {% if error_message %}
+      <div class="banner banner-error" role="alert">
+        <strong>Something went wrong.</strong>
+        <span class="banner-text">{{ error_message }}</span>
+      </div>
+    {% endif %}
+
+    {% if request.method == 'POST' and not error_message %}
+      <section class="panel results" aria-labelledby="results-heading">
+        <div class="results-head">
+          <h2 id="results-heading" class="panel-title">Results</h2>
+          {% if rows %}
+            <p class="results-count">{{ rows|length }} row{% if rows|length != 1 %}s{% endif %}</p>
+          {% endif %}
+        </div>
+
+        {% if rows %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  {% for col in columns %}
+                    <th scope="col">{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rows %}
+                  <tr>
+                    {% for col in columns %}
+                      <td>{{ row[col] }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="empty-state">The query ran successfully but returned no rows.</p>
+        {% endif %}
+      </section>
+    {% elif request.method == 'GET' %}
+      <p class="hint">Choose a report above and click <strong>Run query</strong> to load data.</p>
+    {% endif %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Demo page · data from MySQL</p>
+    </div>
+  </footer>
+</body>
+</html>
