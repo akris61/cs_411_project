@@ -1,10 +1,9 @@
 CREATE TABLE IF NOT EXISTS stage4_audit_log (
-    audit_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
     table_name VARCHAR(64) NOT NULL,
     row_pk VARCHAR(64) NOT NULL,
     action VARCHAR(32) NOT NULL,
-    detail VARCHAR(512) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    detail VARCHAR(512) NULL
 );
 
 DROP TRIGGER IF EXISTS trg_stage4_regions_audit_update;
@@ -13,13 +12,13 @@ CREATE TRIGGER trg_stage4_regions_audit_update
 AFTER UPDATE ON regions
 FOR EACH ROW
 BEGIN
-    IF NOT (OLD.name <=> NEW.name)
-        OR NOT (OLD.code <=> NEW.code)
-        OR NOT (OLD.country <=> NEW.country) THEN
+    IF OLD.name IS DISTINCT FROM NEW.name
+        OR OLD.code IS DISTINCT FROM NEW.code
+        OR OLD.country IS DISTINCT FROM NEW.country THEN
         INSERT INTO stage4_audit_log (table_name, row_pk, action, detail)
         VALUES (
             'regions',
-            CAST(NEW.region_id AS CHAR),
+            NEW.region_id,
             'UPDATE',
             CONCAT('code=', NEW.code, '; name=', NEW.name)
         );

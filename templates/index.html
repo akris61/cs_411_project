@@ -158,7 +158,7 @@
     {% if audit_log %}
     <table class="data compact">
       <thead>
-        <tr><th>id</th><th>table</th><th>row</th><th>action</th><th>detail</th><th>when</th></tr>
+        <tr><th>id</th><th>table</th><th>row</th><th>action</th><th>detail</th></tr>
       </thead>
       <tbody>
         {% for a in audit_log %}
@@ -168,7 +168,6 @@
           <td>{{ a.row_pk }}</td>
           <td>{{ a.action }}</td>
           <td>{{ a.detail }}</td>
-          <td>{{ a.created_at }}</td>
         </tr>
         {% endfor %}
       </tbody>
