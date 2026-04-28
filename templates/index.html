@@ -7,7 +7,21 @@
 </head>
 <body>
   <h1>Renewable Energy Dashboard</h1>
-  <p class="muted">Flask + PyMySQL — Stage 3 saved queries plus Stage 4 CRUD, search, transaction, procedure, and audit log.</p>
+  <p class="muted">Explore and manage renewable energy data with queries, regions, and more.</p>
+
+  <section class="intro">
+    <h2>How to Use This Dashboard</h2>
+    <p>This dashboard helps you explore renewable energy data. Here's a quick guide:</p>
+    <ol>
+      <li><strong>Run Queries:</strong> Select and run predefined queries to view data like renewable averages or CO2 emissions.</li>
+      <li><strong>Manage Regions:</strong> Add, update, or remove geographic regions used in the data.</li>
+      <li><strong>Search:</strong> Find specific regions or indicators by keyword.</li>
+      <li><strong>Update Dashboard:</strong> Automatically populate a dashboard with top-performing renewable regions.</li>
+      <li><strong>Get Summaries:</strong> View detailed summaries for specific regions.</li>
+      <li><strong>View Changes:</strong> Check recent updates to the data.</li>
+    </ol>
+    <p>Actions will show results at the top of the page. Use the forms below to interact with the data.</p>
+  </section>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -20,13 +34,14 @@
   {% endwith %}
 
   {% if result_title is defined and result_rows is defined and result_rows %}
-  <section>
-    <h2>{{ result_title }}</h2>
+  <section class="results">
+    <h2>Query Results: {{ result_title }}</h2>
+    <p>The table below shows the data from your latest action.</p>
     <table class="data">
       <thead>
         <tr>
           {% for key in result_rows[0].keys() %}
-            <th>{{ key }}</th>
+            <th>{{ key.replace('_', ' ').title() }}</th>
           {% endfor %}
         </tr>
       </thead>
@@ -42,36 +57,36 @@
     </table>
   </section>
   {% elif result_title is defined and result_rows is defined %}
-  <section>
+  <section class="results">
     <h2>{{ result_title }}</h2>
-    <p><em>No rows returned.</em></p>
+    <p><em>No data found for this query.</em></p>
   </section>
   {% endif %}
 
   <section>
-    <h2>Saved analytical queries (Stage 3)</h2>
-    <p>Run a pre-written query from <code>sql/queries.sql</code> (read-only dashboard).</p>
+    <h2>Run Predefined Queries</h2>
+    <p>Choose and run a saved query to analyze the data.</p>
     <form method="post" action="{{ url_for('run_saved_query') }}">
-      <label for="query_index">Query</label>
+      <label for="query_index">Select Query</label>
       <select name="query_index" id="query_index">
         {% for q in saved_queries %}
           <option value="{{ loop.index0 }}">{{ q[0] }}</option>
         {% endfor %}
       </select>
-      <button type="submit">Run query</button>
+      <button type="submit">Run Query</button>
     </form>
   </section>
 
   <section>
-    <h2>Regions — full CRUD (Stage 4)</h2>
-    <p>Table <code>regions</code> is independent of login; deletes fail if observations still reference the row.</p>
+    <h2>Manage Regions</h2>
+    <p>Add, update, or remove regions from the database.</p>
 
-    <h3>List (sample)</h3>
+    <h3>Current Regions</h3>
     {% if regions %}
     <table class="data compact">
       <thead>
         <tr>
-          <th>region_id</th><th>code</th><th>name</th><th>country</th><th>lat</th><th>lon</th>
+          <th>ID</th><th>Code</th><th>Name</th><th>Country</th><th>Latitude</th><th>Longitude</th>
         </tr>
       </thead>
       <tbody>
@@ -88,77 +103,71 @@
       </tbody>
     </table>
     {% else %}
-    <p><em>No regions loaded (database empty or connection error).</em></p>
+    <p><em>No regions found.</em></p>
     {% endif %}
 
-    <h3>Create</h3>
+    <h3>Add New Region</h3>
     <form method="post" action="{{ url_for('regions_create') }}" class="grid-form">
-      <label>code <input name="code" placeholder="DEMO_ISLE" required></label>
-      <label>name <input name="name" placeholder="Demo Isle" required></label>
-      <label>country <input name="country" placeholder="Demo Country" required></label>
-      <label>latitude <input name="latitude" placeholder="optional"></label>
-      <label>longitude <input name="longitude" placeholder="optional"></label>
-      <button type="submit">Create region</button>
+      <label>Code <input name="code" placeholder="e.g., USA" required></label>
+      <label>Name <input name="name" placeholder="e.g., United States" required></label>
+      <label>Country <input name="country" placeholder="e.g., United States" required></label>
+      <label>Latitude <input name="latitude" placeholder="optional"></label>
+      <label>Longitude <input name="longitude" placeholder="optional"></label>
+      <button type="submit">Add Region</button>
     </form>
 
-    <h3>Update</h3>
-    <p class="muted">Changing code, name, or country fires the Stage 4 audit trigger (after <code>sql/stage4_advanced.sql</code>).</p>
+    <h3>Update Region</h3>
     <form method="post" action="{{ url_for('regions_update') }}" class="grid-form">
-      <label>region_id <input name="region_id" type="number" min="1" required></label>
-      <label>code <input name="code" required></label>
-      <label>name <input name="name" required></label>
-      <label>country <input name="country" required></label>
-      <label>latitude <input name="latitude"></label>
-      <label>longitude <input name="longitude"></label>
-      <button type="submit">Update region</button>
+      <label>Region ID <input name="region_id" type="number" min="1" required></label>
+      <label>Code <input name="code" required></label>
+      <label>Name <input name="name" required></label>
+      <label>Country <input name="country" required></label>
+      <label>Latitude <input name="latitude"></label>
+      <label>Longitude <input name="longitude"></label>
+      <button type="submit">Update Region</button>
     </form>
 
-    <h3>Delete</h3>
+    <h3>Remove Region</h3>
     <form method="post" action="{{ url_for('regions_delete') }}" class="inline">
-      <label>region_id <input name="region_id" type="number" min="1" required></label>
-      <button type="submit" class="danger">Delete region</button>
+      <label>Region ID <input name="region_id" type="number" min="1" required></label>
+      <button type="submit" class="danger">Remove Region</button>
     </form>
   </section>
 
   <section>
-    <h2>Keyword search (Stage 4)</h2>
-    <p>Parameterized <code>LIKE</code> on region and indicator text columns.</p>
+    <h2>Search Data</h2>
+    <p>Search for regions or indicators by keyword.</p>
     <form method="post" action="{{ url_for('search_keywords') }}" class="inline">
-      <label>Keyword <input name="keyword" placeholder="solar, coal, Germany…" required></label>
+      <label>Keyword <input name="keyword" placeholder="e.g., solar, Germany" required></label>
       <button type="submit">Search</button>
     </form>
   </section>
 
   <section>
-    <h2>Transaction — attach high-renewable regions to a dashboard (Stage 4)</h2>
-    <p>
-      Sets isolation <code>READ COMMITTED</code>, runs <code>START TRANSACTION</code>,
-      locks the dashboard row, clears <code>dashboard_regions</code> for that dashboard,
-      inserts regions whose 2010–2019 Renewables average beats the global average (join + group + subquery),
-      updates <code>dashboards.updated_at</code>, then <code>COMMIT</code> (or <code>ROLLBACK</code> on error).
-    </p>
+    <h2>Update Dashboard with Top Renewable Regions</h2>
+    <p>Automatically add regions with high renewable energy averages to a dashboard.</p>
     <form method="post" action="{{ url_for('stage4_transaction_attach_hot_regions') }}" class="inline">
-      <label>dashboard_id <input name="dashboard_id" type="number" min="1" value="1" required></label>
-      <button type="submit">Run transaction</button>
+      <label>Dashboard ID <input name="dashboard_id" type="number" min="1" value="1" required></label>
+      <button type="submit">Update Dashboard</button>
     </form>
   </section>
 
   <section>
-    <h2>Stored procedure (Stage 4)</h2>
-    <p><code>CALL sp_stage4_region_category_totals(region_code)</code> — join + group + correlated subquery in <code>HAVING</code>.</p>
+    <h2>Get Region Summary</h2>
+    <p>Get a summary of energy categories for a specific region.</p>
     <form method="post" action="{{ url_for('stage4_run_procedure_region_totals') }}" class="inline">
-      <label>region_code <input name="region_code" placeholder="GERMANY" value="GERMANY" required></label>
-      <button type="submit">Run procedure</button>
+      <label>Region Code <input name="region_code" placeholder="e.g., GERMANY" value="GERMANY" required></label>
+      <button type="submit">Get Summary</button>
     </form>
   </section>
 
   <section>
-    <h2>Audit log (Stage 4 trigger output)</h2>
-    <p>Rows appear after you <strong>update</strong> a region once <code>trg_stage4_regions_audit_update</code> exists.</p>
+    <h2>Recent Changes Log</h2>
+    <p>View recent updates to the data.</p>
     {% if audit_log %}
     <table class="data compact">
       <thead>
-        <tr><th>id</th><th>table</th><th>row</th><th>action</th><th>detail</th></tr>
+        <tr><th>ID</th><th>Table</th><th>Row</th><th>Action</th><th>Details</th></tr>
       </thead>
       <tbody>
         {% for a in audit_log %}
@@ -173,7 +182,7 @@
       </tbody>
     </table>
     {% else %}
-    <p><em>No audit rows yet (run stage4 SQL and perform a region update).</em></p>
+    <p><em>No recent changes.</em></p>
     {% endif %}
   </section>
 </body>

@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS stage4_audit_log (
     table_name VARCHAR(64) NOT NULL,
     row_pk VARCHAR(64) NOT NULL,
     action VARCHAR(32) NOT NULL,
-    detail VARCHAR(512) NULL
+    detail VARCHAR(512) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 DROP TRIGGER IF EXISTS trg_stage4_regions_audit_update;
@@ -12,9 +13,9 @@ CREATE TRIGGER trg_stage4_regions_audit_update
 AFTER UPDATE ON regions
 FOR EACH ROW
 BEGIN
-    IF OLD.name IS DISTINCT FROM NEW.name
-        OR OLD.code IS DISTINCT FROM NEW.code
-        OR OLD.country IS DISTINCT FROM NEW.country THEN
+    IF OLD.name <> NEW.name
+        OR OLD.code <> NEW.code
+        OR OLD.country <> NEW.country THEN
         INSERT INTO stage4_audit_log (table_name, row_pk, action, detail)
         VALUES (
             'regions',
@@ -28,6 +29,7 @@ END;
 DROP PROCEDURE IF EXISTS sp_stage4_region_category_totals;
 
 CREATE PROCEDURE sp_stage4_region_category_totals(IN p_region_code VARCHAR(64))
+BEGIN
 SELECT
     i.category,
     i.indicator_id,
@@ -48,3 +50,4 @@ HAVING AVG(o.value) > (
 )
 ORDER BY sum_value DESC
 LIMIT 50;
+END
