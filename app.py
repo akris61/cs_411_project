@@ -54,7 +54,7 @@ def x(sql, args=()):
 
 
 def load_saved_queries():
-    text = (ROOT / "sql" / "queries.sql").read_text().decode("utf-8")
+    text = (ROOT / "sql" / "queries.sql").read_text()
     out = []
     for chunk in text.split("\n-- Query ")[1:]:
         chunk = chunk.lstrip("\r")
