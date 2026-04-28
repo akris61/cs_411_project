@@ -2,87 +2,180 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sustainable energy — query demo</title>
+  <title>Renewable Energy Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap header-inner">
-      <p class="eyebrow">CS 411 · sustainable energy</p>
-      <h1>Renewable energy dashboard</h1>
-      <p class="tagline">Run saved SQL from <code>sql/queries.sql</code> against your MySQL project database.</p>
-    </div>
-  </header>
+  <h1>Renewable Energy Dashboard</h1>
+  <p class="muted">Flask + PyMySQL — Stage 3 saved queries plus Stage 4 CRUD, search, transaction, procedure, and audit log.</p>
 
-  <main class="wrap main-stack">
-    <section class="panel" aria-labelledby="query-heading">
-      <h2 id="query-heading" class="panel-title">Choose a query</h2>
-      <p class="panel-help">Select a report, then run it. Results show in the table below.</p>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash">
+        {% for category, message in messages %}
+          <li class="{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
 
-      <form method="post" class="query-form">
-        <div class="field">
-          <label for="query_choice">Report</label>
-          <select name="query_choice" id="query_choice">
-            <option value="1" {% if choice == '1' %}selected{% endif %}>{{ query_labels[0] }}</option>
-            <option value="2" {% if choice == '2' %}selected{% endif %}>{{ query_labels[1] }}</option>
-            <option value="3" {% if choice == '3' %}selected{% endif %}>{{ query_labels[2] }}</option>
-          </select>
-        </div>
-        <button type="submit" class="btn-primary">Run query</button>
-      </form>
-    </section>
+  {% if result_title is defined and result_rows is defined and result_rows %}
+  <section>
+    <h2>{{ result_title }}</h2>
+    <table class="data">
+      <thead>
+        <tr>
+          {% for key in result_rows[0].keys() %}
+            <th>{{ key }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result_rows %}
+          <tr>
+            {% for cell in row.values() %}
+              <td>{{ cell }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% elif result_title is defined and result_rows is defined %}
+  <section>
+    <h2>{{ result_title }}</h2>
+    <p><em>No rows returned.</em></p>
+  </section>
+  {% endif %}
 
-    {% if error_message %}
-      <div class="banner banner-error" role="alert">
-        <strong>Something went wrong.</strong>
-        <span class="banner-text">{{ error_message }}</span>
-      </div>
+  <section>
+    <h2>Saved analytical queries (Stage 3)</h2>
+    <p>Run a pre-written query from <code>sql/queries.sql</code> (read-only dashboard).</p>
+    <form method="post" action="{{ url_for('run_saved_query') }}">
+      <label for="query_index">Query</label>
+      <select name="query_index" id="query_index">
+        {% for q in saved_queries %}
+          <option value="{{ loop.index0 }}">{{ q[0] }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Run query</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Regions — full CRUD (Stage 4)</h2>
+    <p>Table <code>regions</code> is independent of login; deletes fail if observations still reference the row.</p>
+
+    <h3>List (sample)</h3>
+    {% if regions %}
+    <table class="data compact">
+      <thead>
+        <tr>
+          <th>region_id</th><th>code</th><th>name</th><th>country</th><th>lat</th><th>lon</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in regions %}
+        <tr>
+          <td>{{ r.region_id }}</td>
+          <td>{{ r.code }}</td>
+          <td>{{ r.name }}</td>
+          <td>{{ r.country }}</td>
+          <td>{{ r.latitude }}</td>
+          <td>{{ r.longitude }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p><em>No regions loaded (database empty or connection error).</em></p>
     {% endif %}
 
-    {% if request.method == 'POST' and not error_message %}
-      <section class="panel results" aria-labelledby="results-heading">
-        <div class="results-head">
-          <h2 id="results-heading" class="panel-title">Results</h2>
-          {% if rows %}
-            <p class="results-count">{{ rows|length }} row{% if rows|length != 1 %}s{% endif %}</p>
-          {% endif %}
-        </div>
+    <h3>Create</h3>
+    <form method="post" action="{{ url_for('regions_create') }}" class="grid-form">
+      <label>code <input name="code" placeholder="DEMO_ISLE" required></label>
+      <label>name <input name="name" placeholder="Demo Isle" required></label>
+      <label>country <input name="country" placeholder="Demo Country" required></label>
+      <label>latitude <input name="latitude" placeholder="optional"></label>
+      <label>longitude <input name="longitude" placeholder="optional"></label>
+      <button type="submit">Create region</button>
+    </form>
 
-        {% if rows %}
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  {% for col in columns %}
-                    <th scope="col">{{ col }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in rows %}
-                  <tr>
-                    {% for col in columns %}
-                      <td>{{ row[col] }}</td>
-                    {% endfor %}
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <p class="empty-state">The query ran successfully but returned no rows.</p>
-        {% endif %}
-      </section>
-    {% elif request.method == 'GET' %}
-      <p class="hint">Choose a report above and click <strong>Run query</strong> to load data.</p>
+    <h3>Update</h3>
+    <p class="muted">Changing code, name, or country fires the Stage 4 audit trigger (after <code>sql/stage4_advanced.sql</code>).</p>
+    <form method="post" action="{{ url_for('regions_update') }}" class="grid-form">
+      <label>region_id <input name="region_id" type="number" min="1" required></label>
+      <label>code <input name="code" required></label>
+      <label>name <input name="name" required></label>
+      <label>country <input name="country" required></label>
+      <label>latitude <input name="latitude"></label>
+      <label>longitude <input name="longitude"></label>
+      <button type="submit">Update region</button>
+    </form>
+
+    <h3>Delete</h3>
+    <form method="post" action="{{ url_for('regions_delete') }}" class="inline">
+      <label>region_id <input name="region_id" type="number" min="1" required></label>
+      <button type="submit" class="danger">Delete region</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Keyword search (Stage 4)</h2>
+    <p>Parameterized <code>LIKE</code> on region and indicator text columns.</p>
+    <form method="post" action="{{ url_for('search_keywords') }}" class="inline">
+      <label>Keyword <input name="keyword" placeholder="solar, coal, Germany…" required></label>
+      <button type="submit">Search</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Transaction — attach high-renewable regions to a dashboard (Stage 4)</h2>
+    <p>
+      Sets isolation <code>READ COMMITTED</code>, runs <code>START TRANSACTION</code>,
+      locks the dashboard row, clears <code>dashboard_regions</code> for that dashboard,
+      inserts regions whose 2010–2019 Renewables average beats the global average (join + group + subquery),
+      updates <code>dashboards.updated_at</code>, then <code>COMMIT</code> (or <code>ROLLBACK</code> on error).
+    </p>
+    <form method="post" action="{{ url_for('stage4_transaction_attach_hot_regions') }}" class="inline">
+      <label>dashboard_id <input name="dashboard_id" type="number" min="1" value="1" required></label>
+      <button type="submit">Run transaction</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Stored procedure (Stage 4)</h2>
+    <p><code>CALL sp_stage4_region_category_totals(region_code)</code> — join + group + correlated subquery in <code>HAVING</code>.</p>
+    <form method="post" action="{{ url_for('stage4_run_procedure_region_totals') }}" class="inline">
+      <label>region_code <input name="region_code" placeholder="GERMANY" value="GERMANY" required></label>
+      <button type="submit">Run procedure</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Audit log (Stage 4 trigger output)</h2>
+    <p>Rows appear after you <strong>update</strong> a region once <code>trg_stage4_regions_audit_update</code> exists.</p>
+    {% if audit_log %}
+    <table class="data compact">
+      <thead>
+        <tr><th>id</th><th>table</th><th>row</th><th>action</th><th>detail</th><th>when</th></tr>
+      </thead>
+      <tbody>
+        {% for a in audit_log %}
+        <tr>
+          <td>{{ a.audit_id }}</td>
+          <td>{{ a.table_name }}</td>
+          <td>{{ a.row_pk }}</td>
+          <td>{{ a.action }}</td>
+          <td>{{ a.detail }}</td>
+          <td>{{ a.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p><em>No audit rows yet (run stage4 SQL and perform a region update).</em></p>
     {% endif %}
-  </main>
-
-  <footer class="site-footer">
-    <div class="wrap">
-      <p>Demo page · data from MySQL</p>
-    </div>
-  </footer>
+  </section>
 </body>
 </html>
